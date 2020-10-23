@@ -1,0 +1,45 @@
+<main class = 'flex-center'>
+
+    <div>
+
+        <p>Настройка параметров регулирования</p> 
+
+        <input class = 'slider' type = 'range' id = 'slider-1' name = 'slider-1' min = '0' max = '10' step = '.1'>
+        <label for = 'slider-1' id = 'label-1' class = 'label'></label>   
+
+        <input class = 'slider' type = 'range' id = 'slider-2' name = 'slider-2' min = '0' max = '15' step = '.1'>
+        <label for = 'slider-2' id = 'label-2' class = 'label'></label>  
+        
+        <input class = 'slider' type = 'range' id = 'slider-3' name = 'slider-3' min = '0' max = '15' step = '.1'>
+        <label for = 'slider-3' id = 'label-3' class = 'label'></label>  
+
+        <input class = 'input' type = 'number' inputmode = 'numeric' name = 'input' id = 'input'>
+        <label class = 'label' for = 'input'>Точка регулирования</label>
+
+    </div>
+
+    <div>
+
+        <p>Активация ввода</p>
+
+        <p>
+            <label class = 'switch'>
+                <input id = 'switch-1' type = 'checkbox'>
+                <span class = 'switch-slider'></span>
+            </label>  
+        </p>
+        
+        <p>Включение нагревателя</p>
+
+        <p>
+            <label class = 'switch'>
+                <input id = 'switch-2' type = 'checkbox'>
+                <span class = 'switch-slider'></span>
+            </label>
+        </p>
+
+    </div>
+    
+</main>
+
+<script src = 'pid.js'></script>

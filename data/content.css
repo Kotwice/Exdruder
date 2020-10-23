@@ -1,0 +1,25 @@
+.contentbar {
+    position:  fixed;
+    top: 10%;
+    right: -100%;
+    background: #434a57;
+    width: 95%;
+    height: 50%;
+    transition: .5s;
+}
+
+.contentbar-close {
+    right: -100%;
+}
+
+.contentbar-open {
+    right: 0;
+}
+
+.item-content-open {
+    visibility: visible;
+}
+
+.item-content-close {
+    visibility: hidden;
+}
