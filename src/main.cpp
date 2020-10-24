@@ -1,22 +1,5 @@
-/*SCHEMA*/
-/*
+/*IMPORTING LIBRARIES*/
 
-                          SHIFT REGISTER 74HC595
-                                 ________
-   SPI_MISO (SPICS TC2) <-  Q1 -|1 \_/16|- Vcc  -> 3.3V
-                            Q2 -|2    15|- Q0   -> SPI_MISO (SPICS TC1)
-                            Q3 -|3    14|- DS   -> SPISR_MOSI (ESP32)
-                            Q4 -|4    13|- -OE  -> GND
-                            Q5 -|5    12|- STCP -> SPISR_CS (ESP32)
-                            Q6 -|6    11|- SHCP -> SPISR_SCK (ESP32)
-                            Q7 -|7    10|- -MR  -> 3.3V
-                    GND <- GND -|8_____9|- Q7S
-
-
-*/
-/*------*/
-
-/*IMPORT LIBRARIES*/
 #include <Arduino.h>
 #include <WiFi.h>
 #include <SPI.h>
@@ -24,46 +7,48 @@
 #include <ESPAsyncWebServer.h>
 #include <SD.h>
 #include <FS.h>
+#include <TC.h>
 #include <PID_v1.h>
-#include <SparkFunSX1509.h>
-#include <ShiftRegister.h>
+#include <analogWrite.h>
 
-/*PID*/
-double Setpoint = 200, Input, Output;
-double kp = 4, ki = 0.2, kd = 1;
-PID PIDPWM(&Input, &Output, &Setpoint, kp, ki, kd, DIRECT);
-/*---*/
+/*-------------------*/
 
 /*DEFINE PINS*/
-#define SPISD_MOSI 17
-#define SPISD_MISO 16
-#define SPISD_SCK 5
-#define SPISD_CS 4
-#define SDSPEED 4000000
 
-#define SPISR_CS 19
-#define SPISR_MISO 23
-#define SPISR_SCK 21
-#define SPISR_MOSI 18
+    // Define SPI Interface of SD Card
+        #define SPISD_MOSI 17 // green
+        #define SPISD_MISO 16 // yellow
+        #define SPISD_SCK 5 // white
+        #define SPISD_CS 4 // blue
+        #define SDSPEED 4000000
 
-#define I2C_SDA 0
-#define I2C_SCL 2
+    // Define SPI Interface of Thermal Couples
+        #define SPITC_MISO 23 // yellow
+        #define SPITC_SCK 21 // white
+        #define SPITC_CS_1 19 // blue
+        #define SPITC_CS_2 22 // blue
 
-#define SX1509_ADDRESS 0x3E
-#define SX1509_SPEAKER 0
-#define SX1509_RELAY_PID 2
-#define SX1509_ENA 3
-#define SX1509_IN1 4
-#define SX1509_ENB 5
-#define SX1509_IN4 6
-#define SX1509_SIGNAL 7
+    // Define pins of controlling DC-Motors
+        #define ENA 13
+        #define IN1 12
+        #define ENB 14
+        #define IN4 27
+
+    // Define pins of relays for PID regulation
+        #define RELAY_1 33
+        //#define RELAY_2 32
+        //#define RELAY_3 35
+        //#define RELAY_4 34
+
+    // Define pin of zoomer
+        #define SIGNAL 0
+
+/*----------*/
 
 #define HTML_OK 200
 
-#define DAC 25
-/*----------*/
-
 /*DEFINE GLOBAl VARIABLES*/
+
 const char* ssid = "Extruder";
 const char* password = "TerraNocturne";
 
@@ -75,22 +60,32 @@ AsyncWebServer server(80);
 
 SPIClass SPISD;
 
-SX1509 IO;
+TC TC_1(SPITC_SCK, SPITC_MISO, SPITC_CS_1);
+TC TC_2(SPITC_SCK, SPITC_MISO, SPITC_CS_2);
 
+// Initial conditions for TC
 float TC1 = 0.0, TC2 = 0.0;
-String pid_state = "OFF";
+
+// Initial conditions for PIDs
+    /*
+        Here must be defined new repolarization of method pid controlling
+        with necessary coefficients and setpoints
+    */
+String pid_state_1 = "OFF";
 bool INI_RELAY_LABEL = true;
-String response;
+double Setpoint = 200, Input, Output;
+double kp = 4, ki = 0.2, kd = 1;
+PID PIDPWM(&Input, &Output, &Setpoint, kp, ki, kd, DIRECT);
 
-float dc_pwm_1 = 100, dc_pwm_2 = 70;
-String dc_state_1 = "OFF", dc_state_2 = "OFF";
+String response; // Response by server
 
-String audio_state = "OFF";
-
-ShiftRegister SR;
+// Initial conditions for DC-Motors
+float dc_pwm_1 = 100, dc_pwm_2 = 70; // Values of duty cycle
+String dc_state_1 = "OFF", dc_state_2 = "OFF"; // Labels of state
 /*-----------------------*/
 
-/*INITIALIZE BLOCK*/
+/*INITIALIZE FUNCTION BLOCK*/
+
 void INI_SD () {
 
   SPISD.begin(SPISD_SCK, SPISD_MISO, SPISD_MOSI, SPISD_CS);
@@ -98,39 +93,32 @@ void INI_SD () {
 
 }
 
-void INI_SR () {
-
-    SR.begin(SPISR_SCK, SPISR_MISO, SPISR_MOSI, SPISR_CS);
-
-}
-
-void INI_I2C () {
-
-    Wire.begin(I2C_SDA, I2C_SCL);
-
-}
-
-void INI_SX1509 () {
-
-    IO.begin(SX1509_ADDRESS);   
+void INI_PER () {
     
-    IO.pinMode(SX1509_IN1, OUTPUT);
-    IO.pinMode(SX1509_IN4, OUTPUT);
+    pinMode(IN1, OUTPUT);
+    pinMode(IN4, OUTPUT);
 
-    IO.pinMode(SX1509_SPEAKER, ANALOG_OUTPUT);
-    IO.pinMode(SX1509_RELAY_PID, ANALOG_OUTPUT);
-    IO.pinMode(SX1509_ENA, ANALOG_OUTPUT);
-    IO.pinMode(SX1509_ENB, ANALOG_OUTPUT);
-    IO.pinMode(SX1509_SIGNAL, ANALOG_OUTPUT);
+    pinMode(SIGNAL, ANALOG);
+    pinMode(RELAY_1, ANALOG);
+    pinMode(ENA, ANALOG);
+    pinMode(ENB, ANALOG);
+    pinMode(SIGNAL, ANALOG);
      
-    IO.digitalWrite(SX1509_IN1, LOW);  
-    IO.digitalWrite(SX1509_IN4, LOW);  
+    digitalWrite(IN1, LOW);  
+    digitalWrite(IN4, LOW);  
+    
+    analogWrite(SIGNAL, 0);         
 
-    IO.analogWrite(SX1509_SPEAKER, 255); 
-    IO.analogWrite(SX1509_RELAY_PID, 255);
-    IO.analogWrite(SX1509_ENA, 255);
-    IO.analogWrite(SX1509_ENB, 255);
-    IO.analogWrite(SX1509_SIGNAL, 255);
+    //int frequency_relay_1 = 5000, frequency_dc_1 = 5000, frequency_dc_2 = 5000;
+
+    analogWrite(RELAY_1, 255);
+    //analogWriteFrequency(RELAY_1, frequency_relay_1);
+
+    analogWrite(ENA, 255);
+    //analogWriteFrequency(ENA, frequency_dc_1);
+
+    analogWrite(ENB, 255);
+    //analogWriteFrequency(ENB, frequency_dc_2);
 
 }
 
@@ -141,24 +129,19 @@ void INI_PID () {
 
 }
 
-void SIGNAL () {
 
-    IO.analogWrite(SX1509_SIGNAL, 150);
+void ZOOMER () {
+
+    analogWrite(SIGNAL, 150);
     delay(100);
-    IO.analogWrite(SX1509_SIGNAL, 255);
+    analogWrite(SIGNAL, 255);
     delay(100);
-    IO.analogWrite(SX1509_SIGNAL, 150);
+    analogWrite(SIGNAL, 150);
     delay(100);
-    IO.analogWrite(SX1509_SIGNAL, 255);
+    analogWrite(SIGNAL, 255);
 
 }
 
-void initiate_sd () {
-
-  SPISD.begin(SPISD_SCK, SPISD_MISO, SPISD_MOSI, SPISD_CS);
-  SD.begin(SPISD_CS, SPISD, SDSPEED, "/sd", 25);
-
-}
 
 void INI_WB () {
 
@@ -184,10 +167,6 @@ void INI_WB () {
 
     server.on("/prog_1.html", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(SD, "/prog_1.html", "text/html");
-    }); 
-
-    server.on("/audio.html", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/audio.html", "text/html");
     }); 
 
     server.on("/background.css", HTTP_GET, [](AsyncWebServerRequest *request) {
@@ -230,10 +209,6 @@ void INI_WB () {
         request->send(SD, "/main.js", "text/javascript");
     });
 
-    server.on("/audio.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/audio.js", "text/javascript");
-    });
-    
     server.on("/plotly-latest.min.js", HTTP_GET, [](AsyncWebServerRequest *request){
         request->send(SD, "/plotly-latest.min.js", "text/javascript");
     });    
@@ -246,7 +221,7 @@ void INI_WB () {
         response =  "[{'value': " + String(TC1) + "}, {'value':" + String(TC2) + "}]";
         request->send(HTML_OK, "text/plain", response);
     });
-
+    
     server.on("/pid", HTTP_GET, [](AsyncWebServerRequest *request) {
         if (request->hasParam("ki")) {
             ki = request->getParam("ki")->value().toFloat();
@@ -254,26 +229,26 @@ void INI_WB () {
             kd = request->getParam("kd")->value().toFloat();
             Setpoint = request->getParam("setpoint")->value().toFloat();        
         }
-        if (request->hasParam("pid_state")) {
-            pid_state = request->getParam("pid_state")->value();   
-            if (pid_state == "ON") {
-                IO.analogWrite(SX1509_RELAY_PID, 255 - Output);
-                SIGNAL();   
+        if (request->hasParam("pid_state_1")) {
+            pid_state_1 = request->getParam("pid_state_1")->value();   
+            if (pid_state_1 == "ON") {
+                analogWrite(RELAY_1, 255 - Output);
+                ZOOMER();   
             }
             else {
-                IO.analogWrite(SX1509_RELAY_PID, 255); 
-                SIGNAL();                  
+                analogWrite(RELAY_1, 255); 
+                ZOOMER();                  
             }             
         }
         response = "[{'kp': " + String(kp) + ", 'ki': " + String(ki) + ", 'kd': " + 
-            String(kd) + ",'setpoint': " + String(Setpoint) + ",'pid_state':" + "'" + pid_state + "'" + "}]";
+            String(kd) + ",'setpoint': " + String(Setpoint) + ",'pid_state_1':" + "'" + pid_state_1 + "'" + "}]";
         Serial.println(response);
         request->send(HTML_OK, "text/plain");
     });
 
     server.on("/pid_ini", HTTP_GET, [](AsyncWebServerRequest *request) {
         response = "[{'kp': " + String(kp) + ", 'ki': " + String(ki) + ", 'kd': " + 
-            String(kd) + ",'setpoint': " + String(Setpoint) + " ,'pid_state': " + "'" + pid_state + "'" + "}]";
+            String(kd) + ",'setpoint': " + String(Setpoint) + " ,'pid_state_1': " + "'" + pid_state_1 + "'" + "}]";
         request->send(HTML_OK, "text/plain", response);
     });
     
@@ -281,35 +256,35 @@ void INI_WB () {
 
         if (request->hasParam("dc_pwm_1")) {
             dc_pwm_1 = request->getParam("dc_pwm_1")->value().toInt();
-            IO.analogWrite(SX1509_ENA, dc_pwm_1);
+            analogWrite(ENA, dc_pwm_1);
         }
 
         if (request->hasParam("dc_pwm_2")) {
             dc_pwm_2 = request->getParam("dc_pwm_2")->value().toInt();
-            IO.analogWrite(SX1509_ENB, dc_pwm_2);
+            analogWrite(ENB, dc_pwm_2);
         }
 
         if (request->hasParam("dc_state_1")) {
             dc_state_1 = request->getParam("dc_state_1")->value();
             if (dc_state_1 == "ON") {
-                IO.digitalWrite(SX1509_IN1, HIGH);
-                SIGNAL();
+                digitalWrite(IN1, HIGH);
+                ZOOMER();
             }
             else {
-                IO.digitalWrite(SX1509_IN1, LOW);
-                SIGNAL();
+                digitalWrite(IN1, LOW);
+                ZOOMER();
             }
         }
 
         if (request->hasParam("dc_state_2")) {
             dc_state_2 = request->getParam("dc_state_2")->value();
             if (dc_state_2 == "ON") {
-                IO.digitalWrite(SX1509_IN4, HIGH);
-                SIGNAL();
+                digitalWrite(IN4, HIGH);
+                ZOOMER();
             }
             else {
-                IO.digitalWrite(SX1509_IN4, LOW);
-                SIGNAL();
+                digitalWrite(IN4, LOW);
+                ZOOMER();
             }
         }
 
@@ -326,19 +301,16 @@ void INI_WB () {
             "}, {'dc_pwm': " + String(dc_pwm_2) + ", 'dc_state': " + "'" + dc_state_2 + "'" + "}]";         
         request->send(HTML_OK, "text/plain", response);
     });
-
+    
     server.begin();
 
 }
 
 void READ_TEMTERATURES () {
 
-    int ADRESS_TC1[] = {0, 0, 0, 0, 0, 0, 1, 0};
-    int ADRESS_TC2[] = {0, 0, 0, 0, 0, 0, 0, 1};
-
     unsigned long time_delay = 300;
     
-    TC1 = SR.read(ADRESS_TC1);
+    TC1 = TC_1.read();
 
     unsigned long time_start = millis();
     unsigned long time_current = millis();
@@ -346,7 +318,7 @@ void READ_TEMTERATURES () {
         time_current = millis();
     }  
     
-    TC2 = SR.read(ADRESS_TC2);
+    TC2 = TC_2.read();
 
     time_start = millis();
     time_current = millis();
@@ -356,12 +328,13 @@ void READ_TEMTERATURES () {
 
 }
 
+
 void REGULARATION () {
 
     Input = TC1;
     PIDPWM.SetTunings(kp, ki, kd);
     PIDPWM.Compute();    
-    IO.analogWrite(SX1509_RELAY_PID, 255 - Output);
+    analogWrite(RELAY_1, 255 - Output);
 
 }
 
@@ -369,9 +342,7 @@ void setup() {
 
     Serial.begin(9600);
     INI_SD();
-    INI_SR();
-    INI_I2C();
-    INI_SX1509();
+    INI_PER();
     INI_PID();    
     INI_WB();
 
@@ -380,6 +351,6 @@ void setup() {
 void loop() {
 
     READ_TEMTERATURES();
-    if (pid_state == "ON") {REGULARATION();};   
+    if (pid_state_1 == "ON") {REGULARATION();};   
 
 }
