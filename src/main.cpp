@@ -35,13 +35,10 @@
         #define IN4 27
 
     // Define pins of relays for PID regulation
-        #define RELAY_1 33
-        //#define RELAY_2 32
-        //#define RELAY_3 35
-        //#define RELAY_4 34
-
+        #define RELAY 33
+  
     // Define pin of zoomer
-        #define SIGNAL 0
+        #define SIGNAL 2
 
 /*----------*/
 
@@ -71,7 +68,7 @@ float TC1 = 0.0, TC2 = 0.0;
         Here must be defined new repolarization of method pid controlling
         with necessary coefficients and setpoints
     */
-String pid_state_1 = "OFF";
+String pid_state = "OFF";
 bool INI_RELAY_LABEL = true;
 double Setpoint = 200, Input, Output;
 double kp = 4, ki = 0.2, kd = 1;
@@ -99,7 +96,7 @@ void INI_PER () {
     pinMode(IN4, OUTPUT);
 
     pinMode(SIGNAL, ANALOG);
-    pinMode(RELAY_1, ANALOG);
+    pinMode(RELAY, ANALOG);
     pinMode(ENA, ANALOG);
     pinMode(ENB, ANALOG);
     pinMode(SIGNAL, ANALOG);
@@ -107,17 +104,17 @@ void INI_PER () {
     digitalWrite(IN1, LOW);  
     digitalWrite(IN4, LOW);  
     
-    analogWrite(SIGNAL, 0);         
+    analogWrite(SIGNAL, 0, 255);         
 
-    //int frequency_relay_1 = 5000, frequency_dc_1 = 5000, frequency_dc_2 = 5000;
+    //int frequency_relay = 5000, frequency_dc_1 = 5000, frequency_dc_2 = 5000;
 
-    analogWrite(RELAY_1, 255);
-    //analogWriteFrequency(RELAY_1, frequency_relay_1);
+    analogWrite(RELAY, 0, 255);
+    //analogWriteFrequency(RELAY, frequency_relay);
 
-    analogWrite(ENA, 255);
+    analogWrite(ENA, 0, 255);
     //analogWriteFrequency(ENA, frequency_dc_1);
 
-    analogWrite(ENB, 255);
+    analogWrite(ENB, 0, 255);
     //analogWriteFrequency(ENB, frequency_dc_2);
 
 }
@@ -132,13 +129,13 @@ void INI_PID () {
 
 void ZOOMER () {
 
-    analogWrite(SIGNAL, 150);
+    analogWrite(SIGNAL, 150, 255);
     delay(100);
-    analogWrite(SIGNAL, 255);
+    analogWrite(SIGNAL, 0, 255);
     delay(100);
-    analogWrite(SIGNAL, 150);
+    analogWrite(SIGNAL, 150, 255);
     delay(100);
-    analogWrite(SIGNAL, 255);
+    analogWrite(SIGNAL, 0, 255);
 
 }
 
@@ -229,26 +226,26 @@ void INI_WB () {
             kd = request->getParam("kd")->value().toFloat();
             Setpoint = request->getParam("setpoint")->value().toFloat();        
         }
-        if (request->hasParam("pid_state_1")) {
-            pid_state_1 = request->getParam("pid_state_1")->value();   
-            if (pid_state_1 == "ON") {
-                analogWrite(RELAY_1, 255 - Output);
+        if (request->hasParam("pid_state")) {
+            pid_state = request->getParam("pid_state")->value();   
+            if (pid_state == "ON") {
+                analogWrite(RELAY, Output, 255);
                 ZOOMER();   
             }
             else {
-                analogWrite(RELAY_1, 255); 
+                analogWrite(RELAY, 255, 255); 
                 ZOOMER();                  
             }             
         }
         response = "[{'kp': " + String(kp) + ", 'ki': " + String(ki) + ", 'kd': " + 
-            String(kd) + ",'setpoint': " + String(Setpoint) + ",'pid_state_1':" + "'" + pid_state_1 + "'" + "}]";
+            String(kd) + ",'setpoint': " + String(Setpoint) + ",'pid_state':" + "'" + pid_state + "'" + "}]";
         Serial.println(response);
         request->send(HTML_OK, "text/plain");
     });
 
     server.on("/pid_ini", HTTP_GET, [](AsyncWebServerRequest *request) {
         response = "[{'kp': " + String(kp) + ", 'ki': " + String(ki) + ", 'kd': " + 
-            String(kd) + ",'setpoint': " + String(Setpoint) + " ,'pid_state_1': " + "'" + pid_state_1 + "'" + "}]";
+            String(kd) + ",'setpoint': " + String(Setpoint) + " ,'pid_state': " + "'" + pid_state + "'" + "}]";
         request->send(HTML_OK, "text/plain", response);
     });
     
@@ -256,12 +253,12 @@ void INI_WB () {
 
         if (request->hasParam("dc_pwm_1")) {
             dc_pwm_1 = request->getParam("dc_pwm_1")->value().toInt();
-            analogWrite(ENA, dc_pwm_1);
+            analogWrite(ENA, dc_pwm_1, 255);
         }
 
         if (request->hasParam("dc_pwm_2")) {
             dc_pwm_2 = request->getParam("dc_pwm_2")->value().toInt();
-            analogWrite(ENB, dc_pwm_2);
+            analogWrite(ENB, dc_pwm_2, 255);
         }
 
         if (request->hasParam("dc_state_1")) {
@@ -334,7 +331,7 @@ void REGULARATION () {
     Input = TC1;
     PIDPWM.SetTunings(kp, ki, kd);
     PIDPWM.Compute();    
-    analogWrite(RELAY_1, 255 - Output);
+    analogWrite(RELAY, Output, 255);
 
 }
 
@@ -351,6 +348,6 @@ void setup() {
 void loop() {
 
     READ_TEMTERATURES();
-    if (pid_state_1 == "ON") {REGULARATION();};   
+    if (pid_state == "ON") {REGULARATION();};   
 
 }
