@@ -29,8 +29,8 @@
         #define SPITC_CS_2 22 // blue
 
     // Define pins of controlling DC-Motors
-        #define ENA 13
-        #define IN1 12
+        #define ENA 13 // green
+        #define IN1 12 // yellow
         #define ENB 14
         #define IN4 27
 
@@ -233,7 +233,7 @@ void INI_WB () {
                 ZOOMER();   
             }
             else {
-                analogWrite(RELAY, 255, 255); 
+                analogWrite(RELAY, 0, 255); 
                 ZOOMER();                  
             }             
         }
@@ -269,6 +269,7 @@ void INI_WB () {
             }
             else {
                 digitalWrite(IN1, LOW);
+                analogWrite(ENA, 0, 255);
                 ZOOMER();
             }
         }
@@ -281,6 +282,7 @@ void INI_WB () {
             }
             else {
                 digitalWrite(IN4, LOW);
+                analogWrite(ENB, 0, 255);
                 ZOOMER();
             }
         }
