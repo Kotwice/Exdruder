@@ -97,6 +97,78 @@ String dc_state_1 = "OFF", dc_state_2 = "OFF"; // Labels of state
 
 /*INITIALIZE FUNCTION BLOCK*/
 
+
+void INI_FILES (fs::FS &fs, const char * directory, uint8_t levels) {
+
+    int legnth = 25;
+
+    String* path = new String[legnth];
+    String* type = new String[legnth];
+
+    File root = fs.open(directory);
+
+    if(!root){
+        return;
+    }
+
+    if(!root.isDirectory()){
+        return;
+    }
+
+    File file = root.openNextFile();
+
+    int i = 0;
+
+    while(file){
+
+        if(file.isDirectory()){
+
+            if(levels){
+
+                listDir(fs, file.name(), levels - 1);
+
+            }
+
+        } else {
+
+            path[i] = file.name();
+            type[i] = path[i].indexOf(".")
+
+            Serial.print(" FILE: ");
+            Serial.print(file.name());
+            Serial.print(" SIZE: ");
+            Serial.println(file.size());
+
+            file.name()
+
+        }
+
+        file = root.openNextFile();
+
+        i++;
+
+    }
+
+    int LENGTH = 20;
+    
+    const String* PATH = new String[LENGTH];
+    String* TYPE = new String[LENGTH];
+    String* URL = new String[LENGTH];
+
+    const String& path = "a";
+    const String& type = "A";
+    
+    for (int i = 0; i < LENGTH; i++) {    
+        server.on("/", HTTP_GET, [path, type] (AsyncWebServerRequest *request) {
+            request->send(SD, path, type);
+        });
+    }
+
+
+}
+
+    // listDir(SD, "/", 0);
+
 void INI_SD () {
 
   SPISD.begin(SPISD_SCK, SPISD_MISO, SPISD_MOSI, SPISD_CS);
