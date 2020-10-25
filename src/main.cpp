@@ -10,6 +10,7 @@
 #include <TC.h>
 #include <PID_v1.h>
 #include <analogWrite.h>
+#include <DCE.h>
 
 /*-------------------*/
 
@@ -40,6 +41,10 @@
     // Define pin of zoomer
         #define SIGNAL 2
 
+    // Define pin of current sensor
+        #define CS1 34
+        #define CS2 35
+
 /*----------*/
 
 #define HTML_OK 200
@@ -57,8 +62,17 @@ AsyncWebServer server(80);
 
 SPIClass SPISD;
 
-TC TC_1(SPITC_SCK, SPITC_MISO, SPITC_CS_1);
-TC TC_2(SPITC_SCK, SPITC_MISO, SPITC_CS_2);
+TC Thermocouples[2] = {
+    {SPITC_SCK, SPITC_MISO, SPITC_CS_1}, {SPITC_SCK, SPITC_MISO, SPITC_CS_2}
+};
+
+DCE_PROPERTIES engines[2] = {
+    {0.0099, 0.0099, 10.2, 12, 2, 51}, {0.0099, 0.0099, 10.2, 12, 2, 51} 
+};
+
+DCE Engines[2] = {
+    {engines[0], IN1, ENA, CS1}, {engines[1], IN4, ENB, CS2}
+};
 
 // Initial conditions for TC
 float TC1 = 0.0, TC2 = 0.0;
@@ -91,37 +105,18 @@ void INI_SD () {
 }
 
 void INI_PER () {
-    
-    pinMode(IN1, OUTPUT);
-    pinMode(IN4, OUTPUT);
 
     pinMode(SIGNAL, ANALOG);
     pinMode(RELAY, ANALOG);
-    pinMode(ENA, ANALOG);
-    pinMode(ENB, ANALOG);
-    pinMode(SIGNAL, ANALOG);
-     
-    digitalWrite(IN1, LOW);  
-    digitalWrite(IN4, LOW);  
-    
-    analogWrite(SIGNAL, 0, 255);         
 
-    //int frequency_relay = 5000, frequency_dc_1 = 5000, frequency_dc_2 = 5000;
-
+    analogWrite(SIGNAL, 0, 255);
     analogWrite(RELAY, 0, 255);
-    //analogWriteFrequency(RELAY, frequency_relay);
-
-    analogWrite(ENA, 0, 255);
-    //analogWriteFrequency(ENA, frequency_dc_1);
-
-    analogWrite(ENB, 0, 255);
-    //analogWriteFrequency(ENB, frequency_dc_2);
 
 }
 
 void INI_PID () {
 
-    Input = TC1;
+    Input = Thermocouples[0].T;
     PIDPWM.SetMode(AUTOMATIC);
 
 }
@@ -309,7 +304,7 @@ void READ_TEMTERATURES () {
 
     unsigned long time_delay = 300;
     
-    TC1 = TC_1.read();
+    TC1 = Thermocouples[0].get_temperature();
 
     unsigned long time_start = millis();
     unsigned long time_current = millis();
@@ -317,7 +312,7 @@ void READ_TEMTERATURES () {
         time_current = millis();
     }  
     
-    TC2 = TC_2.read();
+    TC2 = Thermocouples[1].get_temperature();
 
     time_start = millis();
     time_current = millis();

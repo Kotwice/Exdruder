@@ -1,61 +1,66 @@
 #include <TC.h>
 
-TC::TC(int8_t SCK, int8_t MISO, int8_t CS) {
+TC::TC(int8_t sck, int8_t miso, int8_t cs) {
 
-  sck = SCK;
-  cs = CS;
-  miso = MISO;
+  SCK = sck;
+  CS = cs;
+  MISO = miso;
 
-  pinMode(cs, OUTPUT);
-  pinMode(sck, OUTPUT);
-  pinMode(miso, INPUT);
+  pinMode(SCK, OUTPUT);
+  pinMode(CS, OUTPUT);
+  pinMode(MISO, INPUT);
 
-  digitalWrite(cs, HIGH);
+  digitalWrite(CS, HIGH);
 
 }
 
-float TC::read(void) {
+float TC::get_temperature() {
 
-  uint16_t v;
+  uint16_t temp;
 
-  digitalWrite(cs, LOW);
+  digitalWrite(CS, LOW);
   delayMicroseconds(10);
 
-  v = spiread();
-  v <<= 8;
-  v |= spiread();
+  temp = spi_transfer();
+  temp <<= 8;
+  temp |= spi_transfer();
 
-  digitalWrite(cs, HIGH);
+  digitalWrite(CS, HIGH);
 
-  if (v & 0x4) {
+  if (temp & 0x4) {
 
     return NAN;
 
   }
 
-  v >>= 3;
+  temp >>= 3;
 
-  return v * 0.25;
+  T = temp * 0.25;
+
+  return T;
   
 }
 
-byte TC::spiread(void) {
+byte TC::spi_transfer() {
 
-  int i;
-  byte d = 0;
+  byte temp = 0;
 
-  for (i = 7; i >= 0; i--) {
-    digitalWrite(sck, LOW);
+  for (int i = 7; i >= 0; i--) {
+
+    digitalWrite(SCK, LOW);
     delayMicroseconds(10);
-    if (digitalRead(miso)) {
-      // set the bit to 0 no matter what
-      d |= (1 << i);
+
+    if (digitalRead(MISO)) {
+
+      temp |= (1 << i);
+
     }
 
-    digitalWrite(sck, HIGH);
+    digitalWrite(SCK, HIGH);
     delayMicroseconds(10);
+
   }
 
-  return d;
+  return temp;
 
 }

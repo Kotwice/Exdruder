@@ -3,12 +3,13 @@
 class TC {
 
   public:
-    TC(int8_t SCK, int8_t MISO, int8_t CS);
-    float read(void);  
-
+    TC(int8_t sck, int8_t miso, int8_t cs);
+    float get_temperature();  
+    float T = 0;
+    
   private:
-    int8_t sck, miso, cs;
-    uint8_t spiread(void);
+    int8_t SCK, MISO, CS;
+    uint8_t spi_transfer();
 
 };
 
