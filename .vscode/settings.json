@@ -3,6 +3,7 @@
                 "*.tcc": "cpp",
                 "bitset": "cpp",
                 "ostream": "cpp",
-                "limits": "cpp"
+                "limits": "cpp",
+                "functional": "cpp"
         }
 }

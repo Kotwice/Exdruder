@@ -20,6 +20,8 @@ DCE::DCE(DCE_PROPERTIES engine, int8_t in, int8_t en, int8_t cs) {
     digitalWrite(IN, LOW);
     analogWrite(EN, PWM, ADC_RES);
 
+    pinMode(CS, INPUT);
+
     SENSOR = new ACS712(ACS712_05B, CS);
 
 }

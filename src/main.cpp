@@ -42,7 +42,7 @@
         #define SIGNAL 2
 
     // Define pin of current sensor
-        #define CS1 34
+        #define CS1 34 // White
         #define CS2 35
 
 /*----------*/
@@ -97,7 +97,7 @@ String dc_state_1 = "OFF", dc_state_2 = "OFF"; // Labels of state
 
 /*INITIALIZE FUNCTION BLOCK*/
 
-
+/*
 void INI_FILES (fs::FS &fs, const char * directory, uint8_t levels) {
 
     int legnth = 25;
@@ -125,7 +125,7 @@ void INI_FILES (fs::FS &fs, const char * directory, uint8_t levels) {
 
             if(levels){
 
-                listDir(fs, file.name(), levels - 1);
+                file.listDir(fs, file.name(), levels - 1);
 
             }
 
@@ -168,6 +168,7 @@ void INI_FILES (fs::FS &fs, const char * directory, uint8_t levels) {
 }
 
     // listDir(SD, "/", 0);
+*/
 
 void INI_SD () {
 
@@ -320,7 +321,9 @@ void INI_WB () {
 
         if (request->hasParam("dc_pwm_1")) {
             dc_pwm_1 = request->getParam("dc_pwm_1")->value().toInt();
-            analogWrite(ENA, dc_pwm_1, 255);
+            //analogWrite(ENA, dc_pwm_1, 255);
+            Engines[0].set_pwm(dc_pwm_1);
+            Serial.println(Engines[0].get_current());
         }
 
         if (request->hasParam("dc_pwm_2")) {
