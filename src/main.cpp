@@ -78,10 +78,6 @@ DCE Engines[2] = {
 float TC1 = 0.0, TC2 = 0.0;
 
 // Initial conditions for PIDs
-    /*
-        Here must be defined new repolarization of method pid controlling
-        with necessary coefficients and setpoints
-    */
 String pid_state = "OFF";
 bool INI_RELAY_LABEL = true;
 double Setpoint = 200, Input, Output;
@@ -96,79 +92,6 @@ String dc_state_1 = "OFF", dc_state_2 = "OFF"; // Labels of state
 /*-----------------------*/
 
 /*INITIALIZE FUNCTION BLOCK*/
-
-/*
-void INI_FILES (fs::FS &fs, const char * directory, uint8_t levels) {
-
-    int legnth = 25;
-
-    String* path = new String[legnth];
-    String* type = new String[legnth];
-
-    File root = fs.open(directory);
-
-    if(!root){
-        return;
-    }
-
-    if(!root.isDirectory()){
-        return;
-    }
-
-    File file = root.openNextFile();
-
-    int i = 0;
-
-    while(file){
-
-        if(file.isDirectory()){
-
-            if(levels){
-
-                file.listDir(fs, file.name(), levels - 1);
-
-            }
-
-        } else {
-
-            path[i] = file.name();
-            type[i] = path[i].indexOf(".")
-
-            Serial.print(" FILE: ");
-            Serial.print(file.name());
-            Serial.print(" SIZE: ");
-            Serial.println(file.size());
-
-            file.name()
-
-        }
-
-        file = root.openNextFile();
-
-        i++;
-
-    }
-
-    int LENGTH = 20;
-    
-    const String* PATH = new String[LENGTH];
-    String* TYPE = new String[LENGTH];
-    String* URL = new String[LENGTH];
-
-    const String& path = "a";
-    const String& type = "A";
-    
-    for (int i = 0; i < LENGTH; i++) {    
-        server.on("/", HTTP_GET, [path, type] (AsyncWebServerRequest *request) {
-            request->send(SD, path, type);
-        });
-    }
-
-
-}
-
-    // listDir(SD, "/", 0);
-*/
 
 void INI_SD () {
 
@@ -193,7 +116,6 @@ void INI_PID () {
     PIDPWM.SetMode(AUTOMATIC);
 
 }
-
 
 void ZOOMER () {
 
@@ -321,7 +243,6 @@ void INI_WB () {
 
         if (request->hasParam("dc_pwm_1")) {
             dc_pwm_1 = request->getParam("dc_pwm_1")->value().toInt();
-            //analogWrite(ENA, dc_pwm_1, 255);
             Engines[0].set_pwm(dc_pwm_1);
             Serial.println(Engines[0].get_current());
         }
@@ -329,6 +250,7 @@ void INI_WB () {
         if (request->hasParam("dc_pwm_2")) {
             dc_pwm_2 = request->getParam("dc_pwm_2")->value().toInt();
             analogWrite(ENB, dc_pwm_2, 255);
+            Serial.println(Engines[1].get_current());
         }
 
         if (request->hasParam("dc_state_1")) {
@@ -339,7 +261,7 @@ void INI_WB () {
             }
             else {
                 digitalWrite(IN1, LOW);
-                analogWrite(ENA, 0, 255);
+                Engines[0].set_pwm(dc_pwm_1);
                 ZOOMER();
             }
         }
@@ -352,7 +274,7 @@ void INI_WB () {
             }
             else {
                 digitalWrite(IN4, LOW);
-                analogWrite(ENB, 0, 255);
+                Engines[1].set_pwm(dc_pwm_2);
                 ZOOMER();
             }
         }
@@ -376,7 +298,7 @@ void INI_WB () {
 }
 
 void READ_TEMTERATURES () {
-
+    
     unsigned long time_delay = 300;
     
     TC1 = Thermocouples[0].get_temperature();
@@ -396,7 +318,6 @@ void READ_TEMTERATURES () {
     }
 
 }
-
 
 void REGULARATION () {
 
