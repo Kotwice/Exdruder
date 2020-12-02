@@ -12,6 +12,8 @@
 #include <analogWrite.h>
 #include <DCE.h>
 
+// Validation of collabaration;
+
 /*-------------------*/
 
 /*DEFINE PINS*/
@@ -36,7 +38,7 @@
         #define IN4 27
 
     // Define pins of relays for PID regulation
-        #define RELAY 33
+        #define RELAY 33 // black
   
     // Define pin of zoomer
         #define SIGNAL 2
@@ -81,7 +83,7 @@ float TC1 = 0.0, TC2 = 0.0;
 String pid_state = "OFF";
 bool INI_RELAY_LABEL = true;
 double Setpoint = 200, Input, Output;
-double kp = 4, ki = 0.2, kd = 1;
+double kp = 50, ki = 0, kd = 0;
 PID PIDPWM(&Input, &Output, &Setpoint, kp, ki, kd, DIRECT);
 
 String response; // Response by server
@@ -106,6 +108,7 @@ void INI_PER () {
     pinMode(RELAY, ANALOG);
 
     analogWrite(SIGNAL, 0, 255);
+    analogWriteFrequency(RELAY, 95);
     analogWrite(RELAY, 0, 255);
 
 }
@@ -128,7 +131,6 @@ void ZOOMER () {
     analogWrite(SIGNAL, 0, 255);
 
 }
-
 
 void INI_WB () {
 
@@ -244,13 +246,13 @@ void INI_WB () {
         if (request->hasParam("dc_pwm_1")) {
             dc_pwm_1 = request->getParam("dc_pwm_1")->value().toInt();
             Engines[0].set_pwm(dc_pwm_1);
-            Serial.println(Engines[0].get_current());
+            //Serial.println(Engines[0].get_current());
         }
 
         if (request->hasParam("dc_pwm_2")) {
             dc_pwm_2 = request->getParam("dc_pwm_2")->value().toInt();
-            analogWrite(ENB, dc_pwm_2, 255);
-            Serial.println(Engines[1].get_current());
+            Engines[1].set_pwm(dc_pwm_2);
+            //Serial.println(Engines[1].get_current());
         }
 
         if (request->hasParam("dc_state_1")) {
