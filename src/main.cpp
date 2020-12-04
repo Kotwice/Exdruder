@@ -23,7 +23,7 @@
 // pseudo
 // lol//
 //kotkot
-//kot
+//kotlpt
 /*IMPORT LIBRARIES*/
 #include <Arduino.h>
 #include <WiFi.h>
