@@ -20,6 +20,7 @@
 //
 // Kotwice
 // kot
+// pseudo
 /*IMPORT LIBRARIES*/
 #include <Arduino.h>
 #include <WiFi.h>
