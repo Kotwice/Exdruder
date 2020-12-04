@@ -24,6 +24,10 @@
 // lol//
 //kotkot
 //kotlptcxvbnbvcxfghjkl
+
+//dfgh,m.jhg
+
+
 /*IMPORT LIBRARIES*/
 #include <Arduino.h>
 #include <WiFi.h>
