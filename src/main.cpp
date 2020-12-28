@@ -95,85 +95,73 @@ float dc_pwm_1 = 100, dc_pwm_2 = 70; // Values of duty cycle
 String dc_state_1 = "OFF", dc_state_2 = "OFF"; // Labels of state
 /*-----------------------*/
 
+#include <vector>
+#include <iostream>
+
+std::vector<String> path;
+std::vector<String> type;
+std::vector<String> url;
+
+std::vector<String> html;
+std::vector<String> css;
+std::vector<String> js;
+
+
 /*INITIALIZE FUNCTION BLOCK*/
 
-/*
-void INI_FILES (fs::FS &fs, const char * directory, uint8_t levels) {
-
-    int legnth = 25;
-
-    String* path = new String[legnth];
-    String* type = new String[legnth];
-
-    File root = fs.open(directory);
-
+void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
+    File root = fs.open(dirname);
     if(!root){
         return;
     }
-
     if(!root.isDirectory()){
         return;
     }
 
     File file = root.openNextFile();
-
-    int i = 0;
-
     while(file){
-
         if(file.isDirectory()){
-
             if(levels){
-
-                file.listDir(fs, file.name(), levels - 1);
-
+                listDir(fs, file.name(), levels - 1);
             }
-
         } else {
-
-            path[i] = file.name();
-            type[i] = path[i].indexOf(".")
-
-            Serial.print(" FILE: ");
-            Serial.print(file.name());
-            Serial.print(" SIZE: ");
-            Serial.println(file.size());
-
-            file.name()
-
+            path.push_back(file.name());
         }
-
         file = root.openNextFile();
-
-        i++;
-
     }
-
-    int LENGTH = 20;
-    
-    const String* PATH = new String[LENGTH];
-    String* TYPE = new String[LENGTH];
-    String* URL = new String[LENGTH];
-
-    const String& path = "a";
-    const String& type = "A";
-    
-    for (int i = 0; i < LENGTH; i++) {    
-        server.on("/", HTTP_GET, [path, type] (AsyncWebServerRequest *request) {
-            request->send(SD, path, type);
-        });
-    }
-
-
 }
 
-    // listDir(SD, "/", 0);
-*/
 
 void INI_SD () {
 
   SPISD.begin(SPISD_SCK, SPISD_MISO, SPISD_MOSI, SPISD_CS);
   SD.begin(SPISD_CS, SPISD, SDSPEED, "/sd", 25);
+
+}
+
+void INI_FILES () {
+
+    listDir(SD, "/", 0);
+
+    for (String pth: path) {
+        if (pth.substring(pth.lastIndexOf(".") + 1, pth.length()) == "html") {
+            if (pth == "/index.html") {
+                url.push_back("/");
+            } 
+            else {
+                url.push_back(pth);
+            }            
+            type.push_back("text/html");
+        }
+        if (pth.substring(pth.lastIndexOf(".") + 1, pth.length()) == "css") {
+            url.push_back(pth);
+            type.push_back("text/css");
+        }
+        if (pth.substring(pth.lastIndexOf(".") + 1, pth.length()) == "js") {
+            url.push_back(pth);
+            type.push_back("text/javascript");
+        }
+    }
 
 }
 
@@ -207,6 +195,13 @@ void ZOOMER () {
 
 }
 
+String PATH;
+String TYPE;
+String URL;
+
+void function (AsyncWebServerRequest *request, int i) {
+    request->send(SD, path[i], type[i]);
+}
 
 void INI_WB () {
 
@@ -214,163 +209,15 @@ void INI_WB () {
 
     delay(100);
 
-    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/index.html", String(), false);
-    });  
+    for (int i = 0; i < path.size(); i++) {
+        PATH = path[i];
+        TYPE = type[i];
+        URL = url[i];
+        server.on(URL, HTTP_GET,  [=] (AsyncWebServerRequest *request) {
+            function(request, i);
+        });
 
-    server.on("/graph.html", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/graph.html", "text/html");
-    });
-
-    server.on("/pid.html", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/pid.html", "text/html");
-    }); 
-
-    server.on("/dc.html", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/dc.html", "text/html");
-    }); 
-
-    server.on("/prog_1.html", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/prog_1.html", "text/html");
-    }); 
-
-    server.on("/background.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/background.css", "text/css");
-    });
-
-    server.on("/content.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/content.css", "text/css");
-    });
-
-    server.on("/menu.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/menu.css", "text/css");
-    });
-
-    server.on("/pid.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/pid.css", "text/css");
-    });
-
-    server.on("/slider.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/slider.css", "text/css");
-    });
-
-     server.on("/switch.css", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/switch.css", "text/css");
-    });
-
-    server.on("/graph.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/graph.js", "text/javascript");
-    });
-
-    server.on("/pid.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/pid.js", "text/javascript");
-    });
-
-    server.on("/dc.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/dc.js", "text/javascript");
-    });
-    
-    server.on("/main.js", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(SD, "/main.js", "text/javascript");
-    });
-
-    server.on("/plotly-latest.min.js", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send(SD, "/plotly-latest.min.js", "text/javascript");
-    });    
-
-    server.on("/jquery-3.4.1.min.js", HTTP_GET, [](AsyncWebServerRequest *request){
-        request->send(SD, "/jquery-3.4.1.min.js", "text/javascript");
-    });
-
-    server.on("/temperatures", HTTP_GET, [](AsyncWebServerRequest *request) {
-        response =  "[{'value': " + String(TC1) + "}, {'value':" + String(TC2) + "}]";
-        request->send(HTML_OK, "text/plain", response);
-    });
-    
-    server.on("/pid", HTTP_GET, [](AsyncWebServerRequest *request) {
-        if (request->hasParam("ki")) {
-            ki = request->getParam("ki")->value().toFloat();
-            kp = request->getParam("kp")->value().toFloat();
-            kd = request->getParam("kd")->value().toFloat();
-            Setpoint = request->getParam("setpoint")->value().toFloat();        
-        }
-        if (request->hasParam("pid_state")) {
-            pid_state = request->getParam("pid_state")->value();   
-            if (pid_state == "ON") {
-                analogWrite(RELAY, Output, 255);
-                ZOOMER();   
-            }
-            else {
-                analogWrite(RELAY, 0, 255); 
-                ZOOMER();                  
-            }             
-        }
-        response = "[{'kp': " + String(kp) + ", 'ki': " + String(ki) + ", 'kd': " + 
-            String(kd) + ",'setpoint': " + String(Setpoint) + ",'pid_state':" + "'" + pid_state + "'" + "}]";
-        Serial.println(response);
-        request->send(HTML_OK, "text/plain");
-    });
-
-    server.on("/pid_ini", HTTP_GET, [](AsyncWebServerRequest *request) {
-        response = "[{'kp': " + String(kp) + ", 'ki': " + String(ki) + ", 'kd': " + 
-            String(kd) + ",'setpoint': " + String(Setpoint) + " ,'pid_state': " + "'" + pid_state + "'" + "}]";
-        request->send(HTML_OK, "text/plain", response);
-    });
-    
-    server.on("/dc", HTTP_GET, [](AsyncWebServerRequest *request) {
-
-        if (request->hasParam("dc_pwm_1")) {
-            dc_pwm_1 = request->getParam("dc_pwm_1")->value().toInt();
-            //analogWrite(ENA, dc_pwm_1, 255);
-            Engines[0].set_pwm(dc_pwm_1);
-            Serial.println(Engines[0].get_current());
-        }
-
-        if (request->hasParam("dc_pwm_2")) {
-            dc_pwm_2 = request->getParam("dc_pwm_2")->value().toInt();
-            analogWrite(ENB, dc_pwm_2, 255);
-        }
-
-        if (request->hasParam("dc_state_1")) {
-            dc_state_1 = request->getParam("dc_state_1")->value();
-            if (dc_state_1 == "ON") {
-                digitalWrite(IN1, HIGH);
-                ZOOMER();
-            }
-            else {
-                digitalWrite(IN1, LOW);
-                analogWrite(ENA, 0, 255);
-                ZOOMER();
-            }
-        }
-
-        if (request->hasParam("dc_state_2")) {
-            dc_state_2 = request->getParam("dc_state_2")->value();
-            if (dc_state_2 == "ON") {
-                digitalWrite(IN4, HIGH);
-                ZOOMER();
-            }
-            else {
-                digitalWrite(IN4, LOW);
-                analogWrite(ENB, 0, 255);
-                ZOOMER();
-            }
-        }
-
-        response = "[{'dc_pwm': " + String(dc_pwm_1) + ", 'dc_state': " + "'" + dc_state_1 + "'" + 
-            "}, {'dc_pwm': " + String(dc_pwm_2) + ", 'dc_state': " + "'" + dc_state_2 + "'" + "}]"; 
-
-        Serial.println(response);
-
-        request->send(HTML_OK, "text/plain");
-    });
-
-    server.on("/dc_ini", HTTP_GET, [](AsyncWebServerRequest *request) {
-        response = "[{'dc_pwm': " + String(dc_pwm_1) + ", 'dc_state': " + "'" + dc_state_1 + "'" + 
-            "}, {'dc_pwm': " + String(dc_pwm_2) + ", 'dc_state': " + "'" + dc_state_2 + "'" + "}]";         
-        request->send(HTML_OK, "text/plain", response);
-    });
-    
+    }
     server.begin();
 
 }
@@ -411,9 +258,12 @@ void setup() {
 
     Serial.begin(9600);
     INI_SD();
-    INI_PER();
-    INI_PID();    
-    INI_WB();
+    INI_FILES();
+
+
+    //INI_PER();
+    //INI_PID();    
+    //INI_WB();
 
 }
 
